@@ -1,0 +1,58 @@
+name: CI/CD Deploy Static Website
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  check:
+    name: Kiểm tra mã nguồn
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Kiểm tra tồn tại đủ 3 file
+        run: |
+          if [ ! -f "index.html" ] || [ ! -f "style.css" ] || [ ! -f "script.js" ]; then
+            echo "Lỗi: Thiếu một trong 3 file bắt buộc (index.html, style.css, script.js)!"
+            exit 1
+          fi
+          echo "OK: Đã đủ 3 file."
+
+      - name: Kiểm tra thẻ <title> trong index.html
+        run: |
+          if ! grep -qi "<title>.*</title>" index.html; then
+            echo "Lỗi: Không tìm thấy thẻ <title> hợp lệ trong index.html!"
+            exit 1
+          fi
+          echo "OK: Tìm thấy thẻ <title>."
+
+  deploy:
+    name: Deploy lên GitHub Pages
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
